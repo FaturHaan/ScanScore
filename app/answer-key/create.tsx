@@ -64,7 +64,7 @@ export default function CreateAnswerKeyScreen() {
     };
 
     await createAnswerKey(key);
-    router.replace('/(tabs)/');
+    router.replace('/(tabs)');
     alert('Kunci Jawaban berhasil disimpan!');
   };
 
@@ -156,14 +156,12 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: Spacing.base,
-    backgroundColor: '#fff',
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: Spacing.md,
-    color: Colors.neutral[800],
   },
   headerRow: {
     flexDirection: 'row',
@@ -177,7 +175,6 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: Spacing.md,
-    backgroundColor: '#fff',
   },
   row: {
     flexDirection: 'row',

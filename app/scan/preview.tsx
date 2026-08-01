@@ -99,7 +99,7 @@ export default function ScanPreviewScreen() {
       // Navigate to the result details screen
       router.replace(`/results/${gradingResult.id}`);
     } else {
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     }
   };
 

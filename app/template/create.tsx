@@ -51,16 +51,21 @@ export default function CreateTemplateScreen() {
           style={styles.input}
         />
 
-        <TextInput
-          label="Jumlah Soal"
-          value={totalQuestions}
-          onChangeText={setTotalQuestions}
-          mode="outlined"
-          keyboardType="number-pad"
-          style={styles.input}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg }}>
+          <TextInput
+            label="Jumlah Soal"
+            value={totalQuestions}
+            onChangeText={setTotalQuestions}
+            mode="outlined"
+            keyboardType="number-pad"
+            style={[styles.input, { flex: 1, marginBottom: 0, marginRight: Spacing.md }]}
+          />
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, flex: 1 }}>
+            Min 5, Max 100 soal
+          </Text>
+        </View>
 
-        <Text style={styles.label}>Jumlah Opsi Jawaban</Text>
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>Jumlah Opsi Jawaban</Text>
         <SegmentedButtons
           value={options}
           onValueChange={setOptions}
@@ -71,7 +76,7 @@ export default function CreateTemplateScreen() {
           style={styles.segment}
         />
 
-        <Text style={styles.label}>Format Kolom</Text>
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>Format Kolom</Text>
         <SegmentedButtons
           value={columns}
           onValueChange={setColumns}
@@ -101,11 +106,9 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: Spacing.lg,
-    backgroundColor: '#fff',
   },
   label: {
     fontSize: 14,
-    color: Colors.neutral[600],
     marginBottom: Spacing.sm,
   },
   segment: {

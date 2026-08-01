@@ -1,4 +1,3 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -68,24 +67,21 @@ const customDarkTheme = {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const paperTheme = colorScheme === 'dark' ? customDarkTheme : customLightTheme;
-  const navTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
   return (
     <PaperProvider theme={paperTheme}>
-      <ThemeProvider value={navTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="template/create" options={{ title: 'Buat Template', presentation: 'card' }} />
-          <Stack.Screen name="template/[id]" options={{ title: 'Detail Template', presentation: 'card' }} />
-          <Stack.Screen name="answer-key/create" options={{ title: 'Buat Kunci Jawaban', presentation: 'card' }} />
-          <Stack.Screen name="scan/camera" options={{ headerShown: false }} />
-          <Stack.Screen name="scan/preview" options={{ title: 'Preview Hasil', presentation: 'card' }} />
-          <Stack.Screen name="results/[id]" options={{ title: 'Detail Hasil', presentation: 'card' }} />
-          <Stack.Screen name="results/review/[id]" options={{ title: 'Review Manual', presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="results/summary" options={{ title: 'Rekap Kelas', presentation: 'card' }} />
-        </Stack>
-      </ThemeProvider>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="template/create" options={{ title: 'Buat Template', presentation: 'card' }} />
+        <Stack.Screen name="template/[id]" options={{ title: 'Detail Template', presentation: 'card' }} />
+        <Stack.Screen name="answer-key/create" options={{ title: 'Buat Kunci Jawaban', presentation: 'card' }} />
+        <Stack.Screen name="scan/camera" options={{ headerShown: false }} />
+        <Stack.Screen name="scan/preview" options={{ title: 'Preview Hasil', presentation: 'card' }} />
+        <Stack.Screen name="results/[id]" options={{ title: 'Detail Hasil', presentation: 'card' }} />
+        <Stack.Screen name="results/review/[id]" options={{ title: 'Review Manual', presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="results/summary" options={{ title: 'Rekap Kelas', presentation: 'card' }} />
+      </Stack>
     </PaperProvider>
   );
 }

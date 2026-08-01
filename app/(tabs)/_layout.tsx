@@ -55,6 +55,12 @@ export default function TabLayout() {
           title: 'Scan',
           tabBarIcon: ({ color }) => <TabBarIcon name="camera-iris" color={String(color)} />,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('scan/camera');
+          },
+        })}
       />
       <Tabs.Screen
         name="templates"
@@ -68,6 +74,13 @@ export default function TabLayout() {
         options={{
           title: 'Riwayat',
           tabBarIcon: ({ color }) => <TabBarIcon name="history" color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Pengaturan',
+          tabBarIcon: ({ color }) => <TabBarIcon name="cog-outline" color={String(color)} />,
         }}
       />
     </Tabs>
