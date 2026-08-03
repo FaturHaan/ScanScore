@@ -1,7 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { PaperProvider, MD3LightTheme, MD3DarkTheme } from 'react-native-paper';
 
@@ -25,6 +25,7 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [dbInitialized, setDbInitialized] = useState(false);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -32,12 +33,18 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    import('../src/db/schema').then(({ initDatabase }) => {
+      initDatabase().then(() => setDbInitialized(true)).catch(console.error);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (loaded && dbInitialized) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, dbInitialized]);
 
-  if (!loaded) {
+  if (!loaded || !dbInitialized) {
     return null;
   }
 

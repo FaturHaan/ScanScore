@@ -109,9 +109,17 @@ export default function ResultDetailScreen() {
             return (
               <View key={q.questionNumber} style={[styles.qCell, { backgroundColor: bgColor }]}>
                 <Text style={styles.qNumber}>{q.questionNumber}</Text>
-                <Text style={[styles.qAnswer, { color: textColor }]}>
-                  {q.detectedAnswer || '-'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={[styles.qAnswer, { color: textColor }]}>
+                    {q.detectedAnswer || '-'}
+                  </Text>
+                  {isCorrect && (
+                    <MaterialCommunityIcons name="check-circle" size={16} color={Colors.accent[700]} style={{ marginLeft: 4 }} />
+                  )}
+                  {!isCorrect && !isBlank && (
+                    <MaterialCommunityIcons name="close-circle" size={16} color={Colors.danger[700]} style={{ marginLeft: 4 }} />
+                  )}
+                </View>
                 {!isCorrect && !isBlank && (
                   <Text style={styles.qCorrect}>(Kunci: {q.correctAnswer})</Text>
                 )}

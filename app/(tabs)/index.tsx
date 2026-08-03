@@ -90,19 +90,10 @@ export default function DashboardScreen() {
         <TouchableOpacity 
           style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
           activeOpacity={0.8}
-          onPress={() => router.push('/scan/camera')}
-        >
-          <MaterialCommunityIcons name="camera-iris" size={32} color="#fff" />
-          <Text style={styles.actionText}>Scan LJK</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.actionButton, { backgroundColor: Colors.accent[500] }]}
-          activeOpacity={0.8}
           onPress={() => router.push('/template/create')}
         >
-          <MaterialCommunityIcons name="file-document-edit" size={32} color="#fff" />
-          <Text style={styles.actionText}>Buat Template</Text>
+          <MaterialCommunityIcons name="camera-iris" size={32} color="#fff" />
+          <Text style={styles.actionText}>Mulai Scan</Text>
         </TouchableOpacity>
       </View>
 

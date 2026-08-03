@@ -36,7 +36,7 @@ export default function CreateTemplateScreen() {
     template.columns = parseInt(columns, 10) as 1 | 2;
 
     await createTemplate(template);
-    router.back();
+    router.replace({ pathname: '/answer-key/create', params: { templateId: template.id } });
   };
 
   return (
@@ -90,7 +90,7 @@ export default function CreateTemplateScreen() {
 
       <View style={styles.actionContainer}>
         <Button mode="contained" onPress={handleSave} style={styles.button}>
-          Simpan Template
+          Lanjut: Tentukan Kunci Jawaban
         </Button>
       </View>
     </ScrollView>

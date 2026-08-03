@@ -9,6 +9,7 @@ import { processAnswerSheet, quickMarkerCheck } from '../../src/cv/pipeline';
 import { RGBAImage } from '../../src/cv/preprocessor';
 import { createDefaultTemplate } from '../../src/constants/template-defaults';
 import { Colors } from '../../src/constants/theme';
+import { useTemplateStore } from '../../src/store/template-store';
 import * as FileSystem from 'expo-file-system';
 
 export default function CameraScannerScreen() {
@@ -17,12 +18,22 @@ export default function CameraScannerScreen() {
   const [foundMarkers, setFoundMarkers] = useState(0);
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
-
-  // Temporary mock template for now
-  const activeTemplate = createDefaultTemplate('UTS/UAS 20 Soal');
+  
+  const { activeTemplate } = useTemplateStore();
 
   if (!permission) {
     return <View style={styles.container}><ActivityIndicator size="large" /></View>;
+  }
+
+  if (!activeTemplate) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.text}>Format Lembar Jawaban belum ditentukan.</Text>
+        <TouchableOpacity style={styles.button} onPress={() => router.back()}>
+          <Text style={styles.buttonText}>Kembali</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   if (!permission.granted) {

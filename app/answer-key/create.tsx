@@ -64,8 +64,7 @@ export default function CreateAnswerKeyScreen() {
     };
 
     await createAnswerKey(key);
-    router.replace('/(tabs)');
-    alert('Kunci Jawaban berhasil disimpan!');
+    router.replace('/scan/camera');
   };
 
   const optionLabels = 'ABCDE'.slice(0, activeTemplate.optionsPerQuestion).split('');
@@ -130,6 +129,7 @@ export default function CreateAnswerKeyScreen() {
                     buttons={optionLabels.map(opt => ({
                       value: opt,
                       label: opt,
+                      style: { minWidth: 0, paddingHorizontal: 0 },
                     }))}
                     style={styles.optionsSegment}
                     density="small"
@@ -142,7 +142,7 @@ export default function CreateAnswerKeyScreen() {
 
         <View style={styles.footer}>
           <Button mode="contained" onPress={handleSave} style={styles.button}>
-            Simpan Kunci Jawaban
+            Mulai Scan
           </Button>
         </View>
       </ScrollView>
