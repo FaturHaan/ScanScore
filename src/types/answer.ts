@@ -62,7 +62,7 @@ export interface DetectionResult {
   /** Score for each option */
   allScores: Record<string, number>;
   /** Which detection method was used */
-  detectionMethod: 'density' | 'cross' | 'combined';
+  detectionMethod: 'density' | 'cross' | 'combined' | 'shape';
 }
 
-export type DetectionMethod = 'density' | 'cross' | 'combined';
+export type DetectionMethod = 'density' | 'cross' | 'combined' | 'shape';

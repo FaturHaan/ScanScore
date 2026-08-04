@@ -1,23 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Appearance } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Text, Switch, useTheme, Divider } from 'react-native-paper';
 import { Colors, Spacing } from '../../src/constants/theme';
+import { useThemeStore } from '../../src/store/theme-store';
 
 export default function SettingsScreen() {
   const theme = useTheme();
-  const [isDark, setIsDark] = useState(Appearance.getColorScheme() === 'dark');
+  const currentTheme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
 
-  // Listen to appearance changes globally
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setIsDark(colorScheme === 'dark');
-    });
-    return () => subscription.remove();
-  }, []);
+  const isDark = currentTheme === 'dark';
 
   const toggleTheme = (val: boolean) => {
-    Appearance.setColorScheme(val ? 'dark' : 'light');
-    setIsDark(val);
+    setTheme(val ? 'dark' : 'light');
   };
 
   return (

@@ -4,15 +4,21 @@
  * Detects student marks (filled bubbles or cross marks) within each ROI cell.
  * Uses two complementary methods:
  * 1. Pixel Density — ratio of marked pixels to total area
- * 2. Cross Detection — HoughLines-like line detection for X marks
+ * 2. Shape Detection — Identifies valid marks (circle, cross, diagonal) and invalid (horizontal, scribbles).
  * 
- * The combined score determines which option was selected.
+ * Logic for multiple marks:
+ * - 0 marks -> Blank
+ * - 1 valid mark -> Selected option
+ * - >1 valid marks -> Invalid (Wrong)
+ * - 0 valid, >0 invalid marks -> Invalid (Wrong)
  */
 
 import { DetectionResult, CellROI } from '../types/answer';
 import { ProcessingOptions, DEFAULT_PROCESSING_OPTIONS, Line } from './types';
 import { BinaryImage } from './preprocessor';
 import { extractCellImage, calculatePixelDensity } from './roi-detector';
+
+type MarkType = 'blank' | 'valid' | 'invalid';
 
 /**
  * Recognize marks for all questions from the extracted ROI cells.
@@ -31,8 +37,12 @@ export function recognizeMarks(
 
   for (const questionROIs of rois) {
     const scores: Record<string, number> = {};
-    const densities: Record<string, number> = {};
-    const crossDetected: Record<string, boolean> = {};
+    const classifications: Record<string, MarkType> = {};
+
+    let validCount = 0;
+    let invalidCount = 0;
+    let lastValidOption: string | null = null;
+    let anyMarked = false;
 
     for (const cell of questionROIs) {
       // Extract the cell region from the binary image
@@ -40,41 +50,44 @@ export function recognizeMarks(
 
       // Method 1: Pixel Density
       const density = calculatePixelDensity(cellImage);
-      densities[cell.option] = density;
+      scores[cell.option] = density;
 
-      // Method 2: Cross (X) Detection
-      const hasCross = detectCrossPattern(cellImage);
-      crossDetected[cell.option] = hasCross;
+      // Method 2: Shape Classification
+      const classification = classifyCellMark(cellImage, density);
+      classifications[cell.option] = classification;
 
-      // Combined score: density is primary, cross gives a bonus
-      const crossBonus = hasCross ? 0.15 : 0;
-      scores[cell.option] = density + crossBonus;
+      if (classification === 'valid') {
+        validCount++;
+        lastValidOption = cell.option;
+        anyMarked = true;
+      } else if (classification === 'invalid') {
+        invalidCount++;
+        anyMarked = true;
+      }
     }
-
-    // Determine the selected answer
-    const sortedOptions = Object.entries(scores)
-      .sort((a, b) => b[1] - a[1]);
-
-    const topScore = sortedOptions[0][1];
-    const secondScore = sortedOptions.length > 1 ? sortedOptions[1][1] : 0;
 
     let selectedOption: string | null = null;
     let isAmbiguous = false;
     let confidence = 0;
 
-    if (topScore < opts.fillThreshold) {
-      // No option is sufficiently filled — blank answer
+    if (validCount === 0 && invalidCount === 0) {
+      // Blank
       selectedOption = null;
       confidence = 0;
-    } else if (topScore - secondScore < opts.ambiguityMargin) {
-      // Two options are too close — ambiguous
-      selectedOption = sortedOptions[0][0];
+    } else if (validCount === 1) {
+      // Exactly one valid mark (even if there are other invalid marks, we assume they chose the valid one)
+      selectedOption = lastValidOption;
+      confidence = Math.min(scores[lastValidOption!] / 0.6, 1.0);
+    } else if (validCount > 1) {
+      // Multiple valid marks -> ambiguous/wrong
+      selectedOption = 'INVALID_MULTIPLE'; // Custom string to force wrong instead of blank
       isAmbiguous = true;
-      confidence = Math.min(topScore / 0.6, 1.0) * 0.7; // Reduced confidence
-    } else {
-      // Clear winner
-      selectedOption = sortedOptions[0][0];
-      confidence = Math.min(topScore / 0.6, 1.0);
+      confidence = 0;
+    } else if (validCount === 0 && invalidCount > 0) {
+      // Marked, but all invalid -> wrong
+      selectedOption = 'INVALID_MARKS';
+      isAmbiguous = true;
+      confidence = 0;
     }
 
     results.push({
@@ -83,7 +96,7 @@ export function recognizeMarks(
       confidence,
       isAmbiguous,
       allScores: scores,
-      detectionMethod: crossDetected[sortedOptions[0][0]] ? 'combined' : 'density',
+      detectionMethod: 'shape',
     });
   }
 
@@ -91,21 +104,58 @@ export function recognizeMarks(
 }
 
 /**
- * Detect cross (X) pattern in a binary cell image using line detection.
- * 
- * A cross mark consists of two lines that:
- * 1. Intersect near the center of the cell
- * 2. Have angles approximately 45° and 135° (or within tolerance)
- * 3. Span a significant portion of the cell
- * 
- * Uses a simplified Hough Line Transform approach.
+ * Classify a cell mark into blank, valid, or invalid based on its shape and density.
  */
-export function detectCrossPattern(image: BinaryImage): boolean {
+function classifyCellMark(cellImage: BinaryImage, density: number): MarkType {
+  if (density < 0.05) return 'blank'; // Too little ink
+
+  const lines = detectLines(cellImage, [0, 30, 45, 60, 120, 135, 150, 180]);
+  
+  let hasHorizontal = false;
+  let hasDiagonal = false;
+  
+  const hasCross = detectCrossPattern(cellImage, lines);
+  const hasCircle = detectCirclePattern(cellImage);
+  
+  for (const line of lines) {
+    const angle = getLineAngle(line);
+    // Diagonal lines
+    if ((angle >= 30 && angle <= 60) || (angle >= 120 && angle <= 150)) {
+      hasDiagonal = true;
+    }
+    // Horizontal lines (close to 0 or 180)
+    if (angle <= 15 || angle >= 165) {
+      hasHorizontal = true;
+    }
+  }
+
+  // Rule: Crossed-out circle is invalid
+  if (hasCircle && hasCross) return 'invalid';
+  
+  // Rule: Horizontal line is invalid
+  if (hasHorizontal) return 'invalid';
+
+  // Rule: Scribble (high density but no clear shape) is invalid
+  const isScribble = density > 0.35 && !hasCross && !hasCircle;
+  if (isScribble) return 'invalid';
+  
+  // Rule: Valid shapes
+  if (hasCross || hasCircle || hasDiagonal) return 'valid';
+  
+  // Rule: Moderate density but no recognized shape -> invalid
+  if (density >= 0.1) return 'invalid';
+  
+  return 'blank';
+}
+
+/**
+ * Detect cross (X) pattern in a binary cell image using line detection.
+ */
+export function detectCrossPattern(image: BinaryImage, providedLines?: Line[]): boolean {
   const { width, height } = image;
   if (width < 5 || height < 5) return false;
 
-  // Detect lines using a simplified accumulator
-  const lines = detectLines(image);
+  const lines = providedLines || detectLines(image, [30, 45, 60, 120, 135, 150]);
   if (lines.length < 2) return false;
 
   // Look for a pair of lines forming an X
@@ -140,31 +190,76 @@ export function detectCrossPattern(image: BinaryImage): boolean {
 }
 
 /**
- * Simplified line detection using pixel scanning.
- * Detects diagonal lines by checking for continuous runs of white pixels
- * along various angles.
+ * Detect circle pattern.
+ * Validates aspect ratio and edge density vs center density.
  */
-function detectLines(image: BinaryImage): Line[] {
+export function detectCirclePattern(image: BinaryImage): boolean {
+  const { width, height, data } = image;
+  let minX = width, maxX = 0, minY = height, maxY = 0;
+  let pixelCount = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[y * width + x] === 255) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        pixelCount++;
+      }
+    }
+  }
+
+  if (pixelCount < 10) return false;
+
+  const w = maxX - minX;
+  const h = maxY - minY;
+  if (w < 5 || h < 5) return false;
+
+  const aspectRatio = w / h;
+  if (aspectRatio < 0.6 || aspectRatio > 1.6) return false; // Not circular enough
+
+  const cx = minX + w / 2;
+  const cy = minY + h / 2;
+  const radius = Math.min(w, h) / 2;
+  
+  let edgePixels = 0;
+  let edgeTotal = 0;
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const dist = Math.sqrt((x - cx)**2 + (y - cy)**2);
+      // Check the ring area (0.7r to 1.2r)
+      if (dist >= radius * 0.7 && dist <= radius * 1.2) {
+        edgeTotal++;
+        if (data[y * width + x] === 255) edgePixels++;
+      }
+    }
+  }
+
+  const edgeDensity = edgeTotal > 0 ? edgePixels / edgeTotal : 0;
+  // A circular mark should have a relatively continuous outer ring
+  return edgeDensity > 0.4;
+}
+
+/**
+ * Simplified line detection using pixel scanning along specified angles.
+ */
+function detectLines(image: BinaryImage, anglesToScan: number[] = [0, 30, 45, 60, 120, 135, 150, 180]): Line[] {
   const { data, width, height } = image;
   const lines: Line[] = [];
   const minLineLength = Math.min(width, height) * 0.3;
 
-  // Check angles: 30°-60° and 120°-150° (typical cross angles)
-  const angles = [30, 45, 60, 120, 135, 150];
-
-  for (const angleDeg of angles) {
+  for (const angleDeg of anglesToScan) {
     const angleRad = (angleDeg * Math.PI) / 180;
     const dx = Math.cos(angleRad);
     const dy = Math.sin(angleRad);
 
-    // Scan from multiple starting points along the edges
     const starts: Array<{ x: number; y: number }> = [];
     
-    // Left edge
     for (let y = 0; y < height; y += 2) {
       starts.push({ x: 0, y });
     }
-    // Top edge
     for (let x = 0; x < width; x += 2) {
       starts.push({ x, y: 0 });
     }
@@ -179,9 +274,7 @@ function detectLines(image: BinaryImage): Line[] {
       while (x >= 0 && x < width && y >= 0 && y < height) {
         const px = Math.round(x);
         const py = Math.round(y);
-        const idx = py * width + px;
 
-        // Check 3x3 neighborhood for tolerance
         let found = false;
         for (let ky = -1; ky <= 1 && !found; ky++) {
           for (let kx = -1; kx <= 1 && !found; kx++) {
@@ -224,13 +317,9 @@ function detectLines(image: BinaryImage): Line[] {
     }
   }
 
-  // Deduplicate similar lines
   return deduplicateLines(lines, width, height);
 }
 
-/**
- * Get the angle of a line in degrees (0-180).
- */
 function getLineAngle(line: Line): number {
   const dx = line.x2 - line.x1;
   const dy = line.y2 - line.y1;
@@ -239,18 +328,12 @@ function getLineAngle(line: Line): number {
   return angle;
 }
 
-/**
- * Normalize angle to 0-180 range.
- */
 function normalizeAngle(angle: number): number {
   while (angle < 0) angle += 180;
   while (angle >= 180) angle -= 180;
   return angle;
 }
 
-/**
- * Find intersection point of two lines.
- */
 function getLineIntersection(l1: Line, l2: Line): { x: number; y: number } | null {
   const x1 = l1.x1, y1 = l1.y1, x2 = l1.x2, y2 = l1.y2;
   const x3 = l2.x1, y3 = l2.y1, x4 = l2.x2, y4 = l2.y2;
@@ -266,9 +349,6 @@ function getLineIntersection(l1: Line, l2: Line): { x: number; y: number } | nul
   };
 }
 
-/**
- * Remove duplicate/similar lines.
- */
 function deduplicateLines(lines: Line[], width: number, height: number): Line[] {
   if (lines.length <= 1) return lines;
 
@@ -287,7 +367,6 @@ function deduplicateLines(lines: Line[], width: number, height: number): Line[] 
 
       const angleDiff = Math.abs(getLineAngle(lines[i]) - getLineAngle(lines[j]));
       if (angleDiff < 15 || angleDiff > 165) {
-        // Similar angle — check if close
         const midI = { x: (lines[i].x1 + lines[i].x2) / 2, y: (lines[i].y1 + lines[i].y2) / 2 };
         const midJ = { x: (lines[j].x1 + lines[j].x2) / 2, y: (lines[j].y1 + lines[j].y2) / 2 };
         const dist = Math.sqrt((midI.x - midJ.x) ** 2 + (midI.y - midJ.y) ** 2);
